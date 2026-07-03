@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pitchora ― 好きな番組を、もっと語れる。</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <!--
+      ↓ここをWorkerの実際のURLに書き換えてください（Cloudflareダッシュボード → Workers & Pages → 該当Worker
+      に表示されているURL、例: https://pitchora-api.your-subdomain.workers.dev）。
+      再ビルド不要。このファイルをテキストエディタで開いて1行変更 → 保存 → Pagesに再アップロードするだけでOKです。
+    -->
+    <script>
+      window.PITCHORA_API_BASE = "REPLACE_WITH_YOUR_WORKER_URL";
+    </script>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

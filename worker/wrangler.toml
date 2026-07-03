@@ -1,0 +1,23 @@
+name = "pitchora-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# --- 以下はダッシュボードの Workers & Pages > pitchora-api > Settings > Bindings
+# からも同じ内容を設定できます（コードを触らずにGUIだけで完結させたい場合はこちら推奨）。
+#
+# D1 を Bindings 画面で追加する場合の変数名（Variable name）は "DB" にしてください。
+# KV を追加する場合の変数名は "SESSIONS" にしてください（任意・レート制限等に使用）。
+# JWT_SECRET は Settings > Variables and Secrets で「Secret」として追加してください
+# （コードにもwrangler.tomlにも書かないこと）。
+#
+# ダッシュボードだけで完結させる場合、このファイルの [[d1_databases]] / [[kv_namespaces]]
+# セクションは無視して構いません（Gitリポジトリ連携時のみ参照されます）。
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pitchora-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
