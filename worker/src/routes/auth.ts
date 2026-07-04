@@ -2,6 +2,7 @@ import { Env, UserRow } from "../types";
 import { jsonOk, ApiError } from "../utils/response";
 import { hashPassword, verifyPassword, isValidPassword, isValidUserId, isValidEmail } from "../utils/password";
 import { signJwt } from "../utils/jwt";
+import { getDb } from "../db";
 
 interface RegisterBody {
   username?: string;
@@ -27,24 +28,22 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
     throw new ApiError("VALIDATION_ERROR", "パスワードは8〜128文字で、英字と数字を含めてください。", 400);
   }
 
-  const existing = await env.DB
-    .prepare("SELECT id FROM users WHERE user_id = ? OR email = ?")
-    .bind(user_id, email)
-    .first();
-  if (existing) {
+  const sql = getDb(env);
+
+  const existing = await sql("SELECT id FROM users WHERE user_id = $1 OR email = $2", [user_id, email]);
+  if (existing.length > 0) {
     throw new ApiError("CONFLICT", "そのIDまたはメールアドレスは既に使用されています。", 409);
   }
 
   const { hash, salt } = await hashPassword(password);
 
-  const result = await env.DB
-    .prepare(
-      "INSERT INTO users (user_id, username, email, password_hash, password_salt) VALUES (?, ?, ?, ?, ?)"
-    )
-    .bind(user_id, username, email, hash, salt)
-    .run();
+  const rows = await sql(
+    `INSERT INTO users (user_id, username, email, password_hash, password_salt)
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [user_id, username, email, hash, salt]
+  );
 
-  const newUserId = result.meta.last_row_id as number;
+  const newUserId = rows[0].id as number;
   const token = await signJwt({ sub: newUserId, uid: user_id, name: username }, env.JWT_SECRET);
 
   return jsonOk({ token, user: { id: newUserId, user_id, username } }, 201);
@@ -63,10 +62,9 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
     throw new ApiError("VALIDATION_ERROR", "メールアドレスとパスワードを入力してください。", 400);
   }
 
-  const user = await env.DB
-    .prepare("SELECT * FROM users WHERE email = ?")
-    .bind(email)
-    .first<UserRow>();
+  const sql = getDb(env);
+  const rows = await sql("SELECT * FROM users WHERE email = $1", [email]);
+  const user = rows[0] as UserRow | undefined;
 
   if (!user) {
     throw new ApiError("UNAUTHORIZED", "メールアドレスまたはパスワードが正しくありません。", 401);

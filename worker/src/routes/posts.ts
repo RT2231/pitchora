@@ -1,6 +1,7 @@
 import { Env } from "../types";
 import { jsonOk, ApiError } from "../utils/response";
 import { requireAuth, optionalAuth } from "../middleware/auth";
+import { getDb } from "../db";
 
 interface CreatePostBody {
   title?: string;
@@ -10,6 +11,11 @@ interface CreatePostBody {
 }
 
 const VISIBILITIES = ["public", "unlisted", "private"];
+
+// タイムスタンプはUTCのISO8601文字列として返す（フロント側でnew Date()できる形に統一）
+function tsSelect(table: string, column: "created_at" | "updated_at"): string {
+  return `to_char(${table}.${column} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS ${column}`;
+}
 
 function validatePostFields(body: CreatePostBody, partial: boolean) {
   if (!partial || body.title !== undefined) {
@@ -45,47 +51,58 @@ export async function handleListPosts(request: Request, env: Env): Promise<Respo
   const genreId = url.searchParams.get("genre_id");
 
   const auth = await optionalAuth(request, env);
+  const sql = getDb(env);
 
   // 公開投稿 + (ログイン中なら自分の全投稿)
+  const binds: (string | number)[] = [];
   let query = `
-    SELECT p.id, p.title, p.description, p.genre_id, p.visibility, p.created_at, p.updated_at,
+    SELECT p.id, p.title, p.description, p.genre_id, p.visibility, ${tsSelect("p", "created_at")},
+           ${tsSelect("p", "updated_at")},
            u.id as author_id, u.user_id as author_user_id, u.username as author_username,
            g.name as genre_name,
-           (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.is_deleted = 0) as comment_count
+           (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.is_deleted = false) as comment_count
     FROM posts p
     JOIN users u ON u.id = p.user_id
     JOIN genres g ON g.id = p.genre_id
-    WHERE p.is_deleted = 0
-      AND (p.visibility = 'public' ${auth ? "OR p.user_id = ?" : ""})
+    WHERE p.is_deleted = false
   `;
-  const binds: (string | number)[] = [];
-  if (auth) binds.push(auth.userId);
 
-  if (genreId) {
-    query += " AND p.genre_id = ?";
-    binds.push(Number(genreId));
+  if (auth) {
+    binds.push(auth.userId);
+    query += ` AND (p.visibility = 'public' OR p.user_id = $${binds.length})`;
+  } else {
+    query += ` AND p.visibility = 'public'`;
   }
 
-  query += " ORDER BY p.created_at DESC LIMIT ? OFFSET ?";
-  binds.push(limit, offset);
+  if (genreId) {
+    binds.push(Number(genreId));
+    query += ` AND p.genre_id = $${binds.length}`;
+  }
 
-  const { results } = await env.DB.prepare(query).bind(...binds).all();
+  binds.push(limit);
+  query += ` ORDER BY p.created_at DESC LIMIT $${binds.length}`;
+  binds.push(offset);
+  query += ` OFFSET $${binds.length}`;
 
-  return jsonOk({ posts: results, limit, offset });
+  const posts = await sql(query, binds);
+
+  return jsonOk({ posts, limit, offset });
 }
 
 // GET /api/posts/:id
 export async function handleGetPost(request: Request, env: Env, id: number): Promise<Response> {
   const auth = await optionalAuth(request, env);
+  const sql = getDb(env);
 
-  const post = await env.DB
-    .prepare(
-      `SELECT p.*, u.user_id as author_user_id, u.username as author_username, g.name as genre_name
-       FROM posts p JOIN users u ON u.id = p.user_id JOIN genres g ON g.id = p.genre_id
-       WHERE p.id = ? AND p.is_deleted = 0`
-    )
-    .bind(id)
-    .first<any>();
+  const rows = await sql(
+    `SELECT p.id, p.user_id, p.title, p.description, p.genre_id, p.visibility, p.is_deleted,
+            ${tsSelect("p", "created_at")}, ${tsSelect("p", "updated_at")},
+            u.user_id as author_user_id, u.username as author_username, g.name as genre_name
+     FROM posts p JOIN users u ON u.id = p.user_id JOIN genres g ON g.id = p.genre_id
+     WHERE p.id = $1 AND p.is_deleted = false`,
+    [id]
+  );
+  const post = rows[0];
 
   if (!post) {
     throw new ApiError("NOT_FOUND", "投稿が見つかりません。", 404);
@@ -103,20 +120,20 @@ export async function handleCreatePost(request: Request, env: Env): Promise<Resp
   const body = (await request.json().catch(() => ({}))) as CreatePostBody;
   validatePostFields(body, false);
 
-  const genre = await env.DB.prepare("SELECT id FROM genres WHERE id = ?").bind(body.genre_id).first();
-  if (!genre) {
+  const sql = getDb(env);
+
+  const genre = await sql("SELECT id FROM genres WHERE id = $1", [body.genre_id]);
+  if (genre.length === 0) {
     throw new ApiError("VALIDATION_ERROR", "指定されたジャンルが存在しません。", 400);
   }
 
-  const result = await env.DB
-    .prepare(
-      "INSERT INTO posts (user_id, title, description, genre_id, visibility) VALUES (?, ?, ?, ?, ?)"
-    )
-    .bind(auth.userId, body.title, body.description, body.genre_id, body.visibility)
-    .run();
+  const rows = await sql(
+    `INSERT INTO posts (user_id, title, description, genre_id, visibility)
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [auth.userId, body.title, body.description, body.genre_id, body.visibility]
+  );
 
-  const newId = result.meta.last_row_id;
-  return jsonOk({ id: newId }, 201);
+  return jsonOk({ id: rows[0].id }, 201);
 }
 
 // PATCH /api/posts/:id
@@ -125,7 +142,10 @@ export async function handleUpdatePost(request: Request, env: Env, id: number): 
   const body = (await request.json().catch(() => ({}))) as CreatePostBody;
   validatePostFields(body, true);
 
-  const post = await env.DB.prepare("SELECT * FROM posts WHERE id = ? AND is_deleted = 0").bind(id).first<any>();
+  const sql = getDb(env);
+
+  const rows = await sql("SELECT * FROM posts WHERE id = $1 AND is_deleted = false", [id]);
+  const post = rows[0];
   if (!post) throw new ApiError("NOT_FOUND", "投稿が見つかりません。", 404);
   if (post.user_id !== auth.userId) throw new ApiError("FORBIDDEN", "この投稿を編集する権限がありません。", 403);
 
@@ -134,12 +154,10 @@ export async function handleUpdatePost(request: Request, env: Env, id: number): 
   const genreId = body.genre_id ?? post.genre_id;
   const visibility = body.visibility ?? post.visibility;
 
-  await env.DB
-    .prepare(
-      "UPDATE posts SET title = ?, description = ?, genre_id = ?, visibility = ?, updated_at = datetime('now') WHERE id = ?"
-    )
-    .bind(title, description, genreId, visibility, id)
-    .run();
+  await sql(
+    `UPDATE posts SET title = $1, description = $2, genre_id = $3, visibility = $4, updated_at = now() WHERE id = $5`,
+    [title, description, genreId, visibility, id]
+  );
 
   return jsonOk({ id });
 }
@@ -147,18 +165,21 @@ export async function handleUpdatePost(request: Request, env: Env, id: number): 
 // DELETE /api/posts/:id （論理削除）
 export async function handleDeletePost(request: Request, env: Env, id: number): Promise<Response> {
   const auth = await requireAuth(request, env);
+  const sql = getDb(env);
 
-  const post = await env.DB.prepare("SELECT * FROM posts WHERE id = ? AND is_deleted = 0").bind(id).first<any>();
+  const rows = await sql("SELECT * FROM posts WHERE id = $1 AND is_deleted = false", [id]);
+  const post = rows[0];
   if (!post) throw new ApiError("NOT_FOUND", "投稿が見つかりません。", 404);
   if (post.user_id !== auth.userId) throw new ApiError("FORBIDDEN", "この投稿を削除する権限がありません。", 403);
 
-  await env.DB.prepare("UPDATE posts SET is_deleted = 1, updated_at = datetime('now') WHERE id = ?").bind(id).run();
+  await sql("UPDATE posts SET is_deleted = true, updated_at = now() WHERE id = $1", [id]);
 
   return jsonOk({ id });
 }
 
 // GET /api/genres
 export async function handleListGenres(_request: Request, env: Env): Promise<Response> {
-  const { results } = await env.DB.prepare("SELECT id, name FROM genres ORDER BY sort_order ASC").all();
-  return jsonOk({ genres: results });
+  const sql = getDb(env);
+  const genres = await sql("SELECT id, name FROM genres ORDER BY sort_order ASC");
+  return jsonOk({ genres });
 }

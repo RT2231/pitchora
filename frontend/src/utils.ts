@@ -4,9 +4,9 @@ export function escapeHtml(input: string): string {
   return div.innerHTML;
 }
 
-// 番組表のオンエア時刻風にタイムスタンプを整形する
+// 番組表のオンエア時刻風にタイムスタンプを整形する（APIはUTCのISO8601文字列を返す）
 export function formatSlotTime(iso: string): { day: string; time: string } {
-  const d = new Date(iso.replace(" ", "T") + "Z");
+  const d = new Date(iso);
   const days = ["日", "月", "火", "水", "木", "金", "土"];
   const day = days[d.getDay()];
   const hh = String(d.getHours()).padStart(2, "0");

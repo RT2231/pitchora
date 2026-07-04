@@ -1,45 +1,44 @@
--- Pitchora D1 schema (MVP: auth / posts / comments)
--- Run this once against your D1 database from the Cloudflare dashboard
--- (Workers & Pages > D1 > your database > Console), or via `wrangler d1 execute`.
+-- Pitchora Postgres schema (MVP: auth / posts / comments)
+-- Neon の SQL Editor（ダッシュボード）にそのまま貼り付けて実行してください。
 
 CREATE TABLE IF NOT EXISTS users (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  id            SERIAL PRIMARY KEY,
   user_id       TEXT UNIQUE NOT NULL,
   username      TEXT NOT NULL,
   email         TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   password_salt TEXT NOT NULL,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS genres (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  id         SERIAL PRIMARY KEY,
   name       TEXT UNIQUE NOT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS posts (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  id          SERIAL PRIMARY KEY,
   user_id     INTEGER NOT NULL REFERENCES users(id),
   title       TEXT NOT NULL,
   description TEXT NOT NULL,
   genre_id    INTEGER NOT NULL REFERENCES genres(id),
-  visibility  TEXT NOT NULL CHECK(visibility IN ('public','unlisted','private')),
-  is_deleted  INTEGER NOT NULL DEFAULT 0,
-  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  visibility  TEXT NOT NULL CHECK (visibility IN ('public','unlisted','private')),
+  is_deleted  BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS comments (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  id         SERIAL PRIMARY KEY,
   post_id    INTEGER NOT NULL REFERENCES posts(id),
   user_id    INTEGER NOT NULL REFERENCES users(id),
   content    TEXT NOT NULL,
-  is_edited  INTEGER NOT NULL DEFAULT 0,
-  is_deleted INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  is_edited  BOOLEAN NOT NULL DEFAULT false,
+  is_deleted BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
@@ -47,7 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_visibility_created ON posts(visibility, cre
 CREATE INDEX IF NOT EXISTS idx_posts_genre_id ON posts(genre_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id, created_at ASC);
 
-INSERT OR IGNORE INTO genres (name, sort_order) VALUES
+INSERT INTO genres (name, sort_order) VALUES
   ('バラエティ', 1),
   ('ドラマ', 2),
   ('アニメ', 3),
@@ -58,4 +57,5 @@ INSERT OR IGNORE INTO genres (name, sort_order) VALUES
   ('ドキュメンタリー', 8),
   ('ラジオ', 9),
   ('ネット配信', 10),
-  ('その他', 11);
+  ('その他', 11)
+ON CONFLICT (name) DO NOTHING;

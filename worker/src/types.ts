@@ -1,8 +1,8 @@
 export interface Env {
-  DB: D1Database;
+  DATABASE_URL: string; // Neon Postgres 接続文字列（Cloudflareダッシュボードで Secret として設定）
   SESSIONS?: KVNamespace;
   JWT_SECRET: string;
-  ALLOWED_ORIGIN?: string; // 例: https://pitchora.pages.dev
+  ALLOWED_ORIGIN?: string; // 例: https://pitchora.vercel.app
 }
 
 export interface UserRow {
@@ -29,7 +29,7 @@ export interface PostRow {
   description: string;
   genre_id: number;
   visibility: "public" | "unlisted" | "private";
-  is_deleted: number;
+  is_deleted: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -39,8 +39,8 @@ export interface CommentRow {
   post_id: number;
   user_id: number;
   content: string;
-  is_edited: number;
-  is_deleted: number;
+  is_edited: boolean;
+  is_deleted: boolean;
   created_at: string;
   updated_at: string;
 }

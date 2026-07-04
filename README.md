@@ -6,10 +6,10 @@
 
 ## 構成
 
-- `worker/` — バックエンドAPI（Cloudflare Workers + D1 + KV）
+- `worker/` — バックエンドAPI（Cloudflare Workers + Neon Postgres）
 - `frontend/` — SPA（Vercel / Vite + Vanilla TypeScript）
-- `DATABASE.md` — D1のテーブル設計
-- `SETUP.md` — デプロイ手順（バックエンド: Cloudflareダッシュボード／フロントエンド: Vercel）
+- `DATABASE.md` — DBのテーブル設計（Neon / Postgres）
+- `SETUP.md` — デプロイ手順（バックエンド: Cloudflareダッシュボード + Neon／フロントエンド: Vercel）
 
 ## 現状（MVP）
 

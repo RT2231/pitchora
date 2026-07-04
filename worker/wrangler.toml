@@ -2,21 +2,20 @@ name = "pitchora-api"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
-# --- 以下はダッシュボードの Workers & Pages > pitchora-api > Settings > Bindings
+# --- 以下はダッシュボードの Workers & Pages > pitchora-api > Settings
 # からも同じ内容を設定できます（コードを触らずにGUIだけで完結させたい場合はこちら推奨）。
 #
-# D1 を Bindings 画面で追加する場合の変数名（Variable name）は "DB" にしてください。
-# KV を追加する場合の変数名は "SESSIONS" にしてください（任意・レート制限等に使用）。
-# JWT_SECRET は Settings > Variables and Secrets で「Secret」として追加してください
-# （コードにもwrangler.tomlにも書かないこと）。
+# DB（Neon Postgres）は D1 ではなく外部サービスなので Bindings ではなく
+# Settings > Variables and Secrets で以下を追加してください：
+#   - DATABASE_URL（Secret）: Neonダッシュボードで発行される接続文字列
+#     例: postgres://user:password@ep-xxxx.neon.tech/neondb?sslmode=require
+#   - JWT_SECRET（Secret）: ランダムな長い文字列（32文字以上推奨）
+#   - ALLOWED_ORIGIN（Variable）: フロントエンド（Vercel）のURL
 #
-# ダッシュボードだけで完結させる場合、このファイルの [[d1_databases]] / [[kv_namespaces]]
-# セクションは無視して構いません（Gitリポジトリ連携時のみ参照されます）。
-
-[[d1_databases]]
-binding = "DB"
-database_name = "pitchora-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+# KV を使う場合（任意・将来のレート制限やセッション管理用）は
+# Settings > Bindings で Variable name "SESSIONS" として追加できます。
+# ダッシュボードだけで完結させる場合、下記 [[kv_namespaces]] セクションは
+# 無視して構いません（Gitリポジトリ連携時のみ参照されます）。
 
 [[kv_namespaces]]
 binding = "SESSIONS"
