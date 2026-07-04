@@ -1,12 +1,14 @@
-# Pitchora セットアップ手順（Cloudflareダッシュボードのみで完結）
+# Pitchora セットアップ手順
 
 このプロジェクトは以下の3パーツで構成されています。
 
-- `worker/` … バックエンドAPI（Cloudflare Workers + D1）
-- `frontend/` … SPA（Cloudflare Pages）
+- `worker/` … バックエンドAPI（Cloudflare Workers + D1 + KV）
+- `frontend/` … SPA（Vercel / Vite + Vanilla TypeScript）
 - `DATABASE.md` / `worker/schema.sql` … D1のテーブル設計
 
-コマンドライン（wrangler CLI）は使わず、すべてダッシュボードの操作だけで進められます。
+バックエンド（Cloudflare側）はコマンドライン（wrangler CLI）を使わず、
+すべてCloudflareダッシュボードの操作だけで進められます。
+フロントエンドはVercelのダッシュボード（GitHub連携によるImport）でデプロイします。
 
 ---
 
@@ -30,7 +32,7 @@
    - （任意）**KV Namespace**: Variable name = `SESSIONS`（現時点では未使用ですが、将来のレート制限やセッション管理用に用意しています）
 4. **Settings → Variables and Secrets** で以下を追加:
    - `JWT_SECRET`（**Secret** として追加。ランダムな長い文字列。例: パスワード生成ツールで32文字以上）
-   - `ALLOWED_ORIGIN`（**Variable**。PagesのURL、例: `https://pitchora.pages.dev`。フロントとバックのCORS許可用）
+   - `ALLOWED_ORIGIN`（**Variable**。VercelのURL、例: `https://pitchora.vercel.app`。フロントとバックのCORS許可用。手順4で設定・変更します）
 5. **Deploy** をクリック
 
 ### GitHub連携の場合（複数ファイルなのでこちらを推奨）
@@ -43,27 +45,45 @@
 
 ---
 
-## 3. Pages（フロントエンド）を作成する
+## 3. フロントエンドをVercelにデプロイする
 
-1. **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
-2. リポジトリを選択し、**Root directory** を `frontend` に設定
-3. Build設定:
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-4. **Environment variables** に `VITE_API_BASE` を追加し、手順2で作成したWorkerのURL
+フロントエンド（`frontend/`）はCloudflare PagesではなくVercelでホストします
+（バックエンドは引き続きCloudflare Workers + D1 + KVです）。
+
+1. [vercel.com/new](https://vercel.com/new) → GitHubリポジトリ `RT2231/pitchora` をImport
+2. **Root Directory** を `frontend` に設定（モノレポ構成のため必須）
+   - Framework Presetは `Vite` が自動検出されます
+   - Build Command / Output Directoryはデフォルト（`npm run build` / `dist`）のままでOK
+3. **Environment Variables** に `VITE_API_BASE` を追加し、手順2で作成したWorkerのURL
    （例: `https://pitchora-api.your-subdomain.workers.dev`）を設定
-5. **Save and Deploy**
+4. **Deploy**
+5. デプロイ完了後に発行される本番URL（例: `https://pitchora.vercel.app`）を控えておく
+   → 次の手順でWorkerの `ALLOWED_ORIGIN` にこのURLを設定します
+
+すでにVercelプロジェクトを作成済みの場合は、上記2・3を確認・追記するだけで構いません。
 
 ---
 
-## 4. 動作確認
+## 4. Worker の ALLOWED_ORIGIN をVercelのURLに合わせる
 
-1. Pagesのデプロイ完了後に発行されるURLにアクセス
+1. Cloudflareダッシュボード → 対象Worker（`pitchora-api`）→ **Settings → Variables and Secrets**
+2. `ALLOWED_ORIGIN` を、手順3で確認したVercelの本番URL（例: `https://pitchora.vercel.app`）に設定
+   - Vercelはデプロイのたびにプレビュー用の一意なURL（`https://pitchora-xxxx-yourteam.vercel.app`）も発行しますが、
+     まずは本番ドメイン1つに絞ってCORSを許可するのがシンプルです
+   - プレビューデプロイからもAPIを呼びたい場合は、ひとまず `*` にするか、後述の複数オリジン対応を検討してください
+3. 保存すると自動的に再デプロイされます
+
+---
+
+## 5. 動作確認
+
+1. Vercelの本番URLにアクセス
 2. 「はじめる」から新規登録 → 番組を投稿 → コメントできることを確認
 3. うまく通信できない場合:
-   - Workerの `ALLOWED_ORIGIN` がPagesのURLと一致しているか確認
-   - フロントの `VITE_API_BASE` がWorkerのURLと一致しているか確認
+   - Workerの `ALLOWED_ORIGIN` がVercelのURLと一致しているか確認
+   - フロントの `VITE_API_BASE`（Vercelの環境変数）がWorkerのURLと一致しているか確認
    - ブラウザの開発者ツール（Network/Console）でエラー内容を確認
+   - `VITE_API_BASE` を追加・変更した場合はVercel側で再デプロイ（Redeploy）が必要です
 
 ---
 

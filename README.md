@@ -6,10 +6,10 @@
 
 ## 構成
 
-- `worker/` — バックエンドAPI（Cloudflare Workers + D1）
-- `frontend/` — SPA（Cloudflare Pages / Vite + Vanilla TypeScript）
+- `worker/` — バックエンドAPI（Cloudflare Workers + D1 + KV）
+- `frontend/` — SPA（Vercel / Vite + Vanilla TypeScript）
 - `DATABASE.md` — D1のテーブル設計
-- `SETUP.md` — Cloudflareダッシュボードのみで完結するデプロイ手順
+- `SETUP.md` — デプロイ手順（バックエンド: Cloudflareダッシュボード／フロントエンド: Vercel）
 
 ## 現状（MVP）
 
