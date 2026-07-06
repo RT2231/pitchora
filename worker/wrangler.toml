@@ -11,7 +11,7 @@ keep_vars = true
 
 # Observability（ダッシュボードの Settings > Observability に表示された設定を反映）
 [observability.logs]
-enabled = false
+enabled = true
 invocation_logs = true
 
 # --- 設定はCloudflareダッシュボードの Workers & Pages > pitchora > Settings
