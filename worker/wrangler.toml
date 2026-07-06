@@ -9,6 +9,11 @@ compatibility_date = "2025-01-01"
 # なお Secret（DATABASE_URL・JWT_SECRETなど）はこの設定に関わらずデプロイで消えない。
 keep_vars = true
 
+# Observability（ダッシュボードの Settings > Observability に表示された設定を反映）
+[observability.logs]
+enabled = false
+invocation_logs = true
+
 # --- 設定はCloudflareダッシュボードの Workers & Pages > pitchora > Settings
 # から行ってください（コードでの設定は避け、GUIだけで完結させる方針）。
 #
