@@ -1,7 +1,5 @@
-// Worker のデプロイ先URLは index.html 内の window.PITCHORA_API_BASE を書き換えてください
-// （再ビルド不要。テキストエディタでindex.htmlを開いて1行変更するだけです）
-export const API_BASE =
-  (window as unknown as { PITCHORA_API_BASE?: string }).PITCHORA_API_BASE ?? "http://localhost:8787";
+// Worker のデプロイ先URLは Vercel の環境変数 VITE_API_BASE で設定してください
+export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8787";
 
 export interface ApiSuccess<T> { success: true; data: T }
 export interface ApiFailure { success: false; error: { code: string; message: string } }

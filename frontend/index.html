@@ -13,14 +13,6 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <!--
-      ↓ここをWorkerの実際のURLに書き換えてください（Cloudflareダッシュボード → Workers & Pages → 該当Worker
-      に表示されているURL、例: https://pitchora-api.your-subdomain.workers.dev）。
-      再ビルド不要。このファイルをテキストエディタで開いて1行変更 → 保存 → Pagesに再アップロードするだけでOKです。
-    -->
-    <script>
-      window.PITCHORA_API_BASE = "REPLACE_WITH_YOUR_WORKER_URL";
-    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
