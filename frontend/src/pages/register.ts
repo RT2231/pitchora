@@ -21,6 +21,7 @@ export function renderRegister(container: HTMLElement) {
           <div class="field">
             <label for="user_id">ID</label>
             <input type="text" id="user_id" placeholder="半角英数字・_・-　3〜20文字" pattern="[A-Za-z0-9_-]{3,20}" required />
+            <div class="hint">半角英数字、アンダースコア(_)、ハイフン(-)のみ使用可。3〜20文字。</div>
           </div>
           <div class="field">
             <label for="email">メールアドレス</label>
