@@ -2,6 +2,13 @@ name = "pitchora"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
+# keep_vars = true: ダッシュボードの Settings > Variables and Secrets で設定した
+# 値（Variables）を、GitHub連携によるデプロイ（wrangler deploy）で消さないようにする設定。
+# これが無いと、wrangler.toml に [vars] の記載が無いだけで、
+# ダッシュボードで設定した Variable が毎回リセットされてしまう（既知のWrangler仕様）。
+# なお Secret（DATABASE_URL・JWT_SECRETなど）はこの設定に関わらずデプロイで消えない。
+keep_vars = true
+
 # --- 設定はCloudflareダッシュボードの Workers & Pages > pitchora > Settings
 # から行ってください（コードでの設定は避け、GUIだけで完結させる方針）。
 #
