@@ -1,9 +1,9 @@
-name = "pitchora-api"
+name = "pitchora"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
-# --- 以下はダッシュボードの Workers & Pages > pitchora-api > Settings
-# からも同じ内容を設定できます（コードを触らずにGUIだけで完結させたい場合はこちら推奨）。
+# --- 設定はCloudflareダッシュボードの Workers & Pages > pitchora > Settings
+# から行ってください（コードでの設定は避け、GUIだけで完結させる方針）。
 #
 # DB（Neon Postgres）は D1 ではなく外部サービスなので Bindings ではなく
 # Settings > Variables and Secrets で以下を追加してください：
@@ -12,11 +12,8 @@ compatibility_date = "2025-01-01"
 #   - JWT_SECRET（Secret）: ランダムな長い文字列（32文字以上推奨）
 #   - ALLOWED_ORIGIN（Variable）: フロントエンド（Vercel）のURL
 #
-# KV を使う場合（任意・将来のレート制限やセッション管理用）は
-# Settings > Bindings で Variable name "SESSIONS" として追加できます。
-# ダッシュボードだけで完結させる場合、下記 [[kv_namespaces]] セクションは
-# 無視して構いません（Gitリポジトリ連携時のみ参照されます）。
-
-[[kv_namespaces]]
-binding = "SESSIONS"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+# KVは現時点のコードでは使用していません。将来使う場合は、実際にKV Namespaceを
+# ダッシュボードで作成したうえで、Settings > Bindings から "SESSIONS" という
+# Variable nameで追加してください（このファイルへの追記は不要です。
+# Git連携デプロイではこのファイルの内容がダッシュボード側の設定より優先されるため、
+# 存在しないIDをここに書くとデプロイが失敗します）。

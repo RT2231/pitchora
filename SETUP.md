@@ -26,7 +26,9 @@
 
 ## 2. Workerを作成する
 
-1. Cloudflareダッシュボード → **Workers & Pages** → **Create** → **Workers** → 適当な名前（例: `pitchora-api`）で作成
+1. Cloudflareダッシュボード → **Workers & Pages** → **Create** → **Workers** → 適当な名前（例: `pitchora`）で作成
+   - **GitHub連携でWorkerを作成する場合、ここで付けた名前と `worker/wrangler.toml` の `name` を一致させてください。**
+     一致しないと `wrangler deploy` 実行時に警告が出ます（自動的に補正はされますが、念のため揃えておくのが安全です）。
 2. 作成後、**Edit code**（Quick Editor）を開き、`worker/src/` 以下のファイルの内容をそのまま貼り付けます
    - Quick Editorは単一ファイルの簡易エディタなので、複数ファイルの場合は
      GitHubリポジトリと連携してデプロイする方法（下記「GitHub連携の場合」）が簡単です
@@ -57,7 +59,7 @@
    - Framework Presetは `Vite` が自動検出されます
    - Build Command / Output Directoryはデフォルト（`npm run build` / `dist`）のままでOK
 3. **Environment Variables** に `VITE_API_BASE` を追加し、手順2で作成したWorkerのURL
-   （例: `https://pitchora-api.your-subdomain.workers.dev`）を設定
+   （例: `https://pitchora.your-subdomain.workers.dev`）を設定
 4. **Deploy**
 5. デプロイ完了後に発行される本番URL（例: `https://pitchora.vercel.app`）を控えておく
    → 次の手順でWorkerの `ALLOWED_ORIGIN` にこのURLを設定します
@@ -68,7 +70,7 @@
 
 ## 4. Worker の ALLOWED_ORIGIN をVercelのURLに合わせる
 
-1. Cloudflareダッシュボード → 対象Worker（`pitchora-api`）→ **Settings → Variables and Secrets**
+1. Cloudflareダッシュボード → 対象Worker（`pitchora`）→ **Settings → Variables and Secrets**
 2. `ALLOWED_ORIGIN` を、手順3で確認したVercelの本番URL（例: `https://pitchora.vercel.app`）に設定
    - Vercelはデプロイのたびにプレビュー用の一意なURL（`https://pitchora-xxxx-yourteam.vercel.app`）も発行しますが、
      まずは本番ドメイン1つに絞ってCORSを許可するのがシンプルです
@@ -87,6 +89,10 @@
    - フロントの `VITE_API_BASE`（Vercelの環境変数）がWorkerのURLと一致しているか確認
    - ブラウザの開発者ツール（Network/Console）でエラー内容を確認
    - `VITE_API_BASE` を追加・変更した場合はVercel側で再デプロイ（Redeploy）が必要です
+4. Git連携でWorkerをデプロイしている場合、ビルドログに
+   `KV namespace '...' is not valid` のようなエラーが出たときは、
+   `worker/wrangler.toml` に実在しないKV Namespace IDが書かれていないか確認してください。
+   KVを使わないなら `wrangler.toml` から `[[kv_namespaces]]` セクション自体を削除するのが確実です。
 
 ---
 
