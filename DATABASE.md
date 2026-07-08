@@ -5,8 +5,8 @@ Version: 0.2.0（MVP: 認証〜投稿〜コメントの範囲のみ）
 このドキュメントは Neon（Postgres）上のテーブル設計を定義する。
 SPEC.md を唯一の仕様とし、本ドキュメントはその実装としての DB 設計を担う。
 
-対象範囲（MVP）: 3章(アカウント), 5章(投稿), 6章(コメント), 15章(ジャンル)
-将来拡張（未実装）: 返信の多階層化, リアクション種別追加, ブックマーク, フォロー, 通知, 検索インデックス, タグ, NGワード, 通報/管理者機能, 放送局
+対象範囲（実装済み）: 3章(アカウント), 5章(投稿), 6章(コメント), 10章(フォロー), 15章(ジャンル), 18章(フォロー一覧・簡易版)
+将来拡張（未実装）: 返信の多階層化, リアクション種別追加, ブックマーク, 通知, 検索インデックス, タグ, NGワード, 通報/管理者機能, 放送局
 
 **データベース: Neon（Postgres） ※D1は使用しない**
 Cloudflare Workers からは `@neondatabase/serverless`（HTTPベースのドライバ）で接続する。
@@ -107,13 +107,34 @@ CREATE INDEX idx_comments_post_id ON comments(post_id, created_at ASC);
 
 ---
 
+### follows
+
+| カラム | 型 | 制約 | 説明 |
+|---|---|---|---|
+| id | SERIAL | PRIMARY KEY | ID |
+| follower_id | INTEGER | NOT NULL REFERENCES users(id) | フォローする側 |
+| followee_id | INTEGER | NOT NULL REFERENCES users(id) | フォローされる側 |
+| created_at | TIMESTAMPTZ | NOT NULL DEFAULT now() | フォローした日時 |
+
+制約: `UNIQUE (follower_id, followee_id)`（二重フォロー防止）、`CHECK (follower_id <> followee_id)`（自己フォロー禁止）
+
+インデックス:
+```sql
+CREATE INDEX idx_follows_follower ON follows(follower_id);
+CREATE INDEX idx_follows_followee ON follows(followee_id);
+```
+
+注記: フォロー解除は即時反映・通知なし（SPEC 10章）。相互フォロー判定はAPI側で
+`follows`を2方向で検索して算出する（専用カラムは持たない）。
+
+---
+
 ## 将来マイグレーション予定（未実装・参考）
 
 - posts: tags(JSONB or 別テーブル), broadcast_day, broadcast_time, cast, thumbnail_url
 - comments: parent_comment_id（返信）
 - reactions テーブル（いいね・将来の複数リアクション）
 - bookmarks テーブル
-- follows テーブル
 - notifications テーブル
 - reports テーブル
 - ng_words テーブル

@@ -10,6 +10,13 @@ import {
   handleListGenres,
 } from "./routes/posts";
 import { handleListComments, handleCreateComment, handleDeleteComment } from "./routes/comments";
+import {
+  handleGetUserProfile,
+  handleFollowUser,
+  handleUnfollowUser,
+  handleListFollowers,
+  handleListFollowing,
+} from "./routes/users";
 
 function corsHeaders(env: Env, request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
@@ -84,6 +91,32 @@ async function route(request: Request, env: Env, path: string, method: string): 
   if (commentIdMatch) {
     const id = Number(commentIdMatch[1]);
     if (method === "DELETE") return handleDeleteComment(request, env, id);
+  }
+
+  // /api/users/:userId/follow
+  const followMatch = path.match(/^\/api\/users\/([^/]+)\/follow$/);
+  if (followMatch) {
+    const userId = decodeURIComponent(followMatch[1]);
+    if (method === "POST") return handleFollowUser(request, env, userId);
+    if (method === "DELETE") return handleUnfollowUser(request, env, userId);
+  }
+
+  // /api/users/:userId/followers
+  const followersMatch = path.match(/^\/api\/users\/([^/]+)\/followers$/);
+  if (followersMatch && method === "GET") {
+    return handleListFollowers(request, env, decodeURIComponent(followersMatch[1]));
+  }
+
+  // /api/users/:userId/following
+  const followingMatch = path.match(/^\/api\/users\/([^/]+)\/following$/);
+  if (followingMatch && method === "GET") {
+    return handleListFollowing(request, env, decodeURIComponent(followingMatch[1]));
+  }
+
+  // /api/users/:userId
+  const userIdMatch = path.match(/^\/api\/users\/([^/]+)$/);
+  if (userIdMatch && method === "GET") {
+    return handleGetUserProfile(request, env, decodeURIComponent(userIdMatch[1]));
   }
 
   throw new ApiError("NOT_FOUND", "指定されたエンドポイントは存在しません。", 404);

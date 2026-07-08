@@ -22,7 +22,7 @@ export async function renderPostDetail(container: HTMLElement, id: number) {
     <div class="post-header">
       <div class="post-eyebrow">${escapeHtml(post.genre_name)}${post.visibility !== "public" ? ` ・ ${VISIBILITY_LABEL[post.visibility]}` : ""}</div>
       <h1 class="post-title">${escapeHtml(post.title)}</h1>
-      <div class="post-byline">@${escapeHtml(post.author_user_id)} ・ ${formatRelative(post.created_at)} OA</div>
+      <div class="post-byline">@<a href="#/users/${encodeURIComponent(post.author_user_id)}" style="color:inherit">${escapeHtml(post.author_user_id)}</a> ・ ${formatRelative(post.created_at)} OA</div>
       ${
         isOwner
           ? `<div class="post-actions">
@@ -98,7 +98,7 @@ async function loadComments(container: HTMLElement, postId: number, user: { id: 
         return `
           <div class="comment">
             <div class="comment-head">
-              <span class="comment-author">@${escapeHtml(c.author_user_id)}</span>
+              <span class="comment-author">@<a href="#/users/${encodeURIComponent(c.author_user_id)}" style="color:inherit">${escapeHtml(c.author_user_id)}</a></span>
               <span class="comment-time">${formatRelative(c.created_at)}</span>
               ${c.is_edited && !c.is_deleted ? `<span class="comment-edited">編集済み</span>` : ""}
             </div>

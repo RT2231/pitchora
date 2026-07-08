@@ -39,22 +39,28 @@ export async function renderHome(container: HTMLElement) {
             ? `<span class="visibility-tag">${VISIBILITY_LABEL[p.visibility]}</span>`
             : "";
         return `
-          <a class="slot" href="#/posts/${p.id}" style="display:grid">
+          <div class="slot" data-post-link="${p.id}" style="display:grid;cursor:pointer">
             <div class="slot-time"><span class="day">${day}</span>${time}</div>
             <div>
               <span class="slot-genre">${escapeHtml(p.genre_name)}</span>
               <h2 class="slot-title">${escapeHtml(p.title)}</h2>
               <p class="slot-desc">${escapeHtml(p.description)}</p>
               <div class="slot-meta">
-                <span>@${escapeHtml(p.author_user_id)}</span>
+                <a href="#/users/${encodeURIComponent(p.author_user_id)}" style="color:inherit" onclick="event.stopPropagation()">@${escapeHtml(p.author_user_id)}</a>
                 <span>💬 ${p.comment_count}</span>
                 ${visTag}
               </div>
             </div>
-          </a>
+          </div>
         `;
       })
       .join("");
+
+    listEl.querySelectorAll<HTMLDivElement>("[data-post-link]").forEach((el) => {
+      el.addEventListener("click", () => {
+        window.location.hash = `/posts/${el.dataset.postLink}`;
+      });
+    });
   } catch {
     listEl.innerHTML = `<div class="empty-state">番組表の読み込みに失敗しました。</div>`;
   }

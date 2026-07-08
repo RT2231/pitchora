@@ -43,12 +43,13 @@ function validatePostFields(body: CreatePostBody, partial: boolean) {
   }
 }
 
-// GET /api/posts?limit=20&offset=0&genre_id=1
+// GET /api/posts?limit=20&offset=0&genre_id=1&author=user_id
 export async function handleListPosts(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 20) || 20, 50);
   const offset = Math.max(Number(url.searchParams.get("offset") ?? 0) || 0, 0);
   const genreId = url.searchParams.get("genre_id");
+  const author = url.searchParams.get("author");
 
   const auth = await optionalAuth(request, env);
   const sql = getDb(env);
@@ -77,6 +78,11 @@ export async function handleListPosts(request: Request, env: Env): Promise<Respo
   if (genreId) {
     binds.push(Number(genreId));
     query += ` AND p.genre_id = $${binds.length}`;
+  }
+
+  if (author) {
+    binds.push(author);
+    query += ` AND u.user_id = $${binds.length}`;
   }
 
   binds.push(limit);

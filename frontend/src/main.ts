@@ -6,6 +6,7 @@ import { renderLogin } from "./pages/login";
 import { renderRegister } from "./pages/register";
 import { renderPostDetail } from "./pages/postDetail";
 import { renderPostForm } from "./pages/newPost";
+import { renderProfile } from "./pages/profile";
 
 const app = document.getElementById("app")!;
 
@@ -26,7 +27,7 @@ function renderNav() {
   const user = getCurrentUser();
   if (user) {
     navActions.innerHTML = `
-      <span class="user-chip">@${user.user_id}</span>
+      <a href="#/users/${encodeURIComponent(user.user_id)}" class="user-chip">@${user.user_id}</a>
       <button id="logout-btn" class="btn btn-ghost">ログアウト</button>
     `;
     document.getElementById("logout-btn")!.addEventListener("click", () => {
@@ -58,6 +59,7 @@ addRoute("/posts/:id/edit", (params) => {
   renderPostForm(page, Number(params.id));
 });
 addRoute("/posts/:id", (params) => renderPostDetail(page, Number(params.id)));
+addRoute("/users/:userId", (params) => renderProfile(page, params.userId));
 
 setNotFound(() => {
   page.innerHTML = `<div class="empty-state"><div class="headline">ページが見つかりません</div><a href="#/" class="btn" style="margin-top:12px">番組表に戻る</a></div>`;

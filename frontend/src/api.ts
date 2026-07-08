@@ -70,10 +70,11 @@ export const api = {
 
   listGenres: () => request<{ genres: { id: number; name: string }[] }>("/api/genres"),
 
-  listPosts: (params: { genre_id?: number; offset?: number } = {}) => {
+  listPosts: (params: { genre_id?: number; offset?: number; author?: string } = {}) => {
     const q = new URLSearchParams();
     if (params.genre_id) q.set("genre_id", String(params.genre_id));
     if (params.offset) q.set("offset", String(params.offset));
+    if (params.author) q.set("author", params.author);
     return request<{ posts: any[]; limit: number; offset: number }>(`/api/posts?${q.toString()}`);
   },
 
@@ -93,4 +94,26 @@ export const api = {
     request<{ id: number }>(`/api/posts/${postId}/comments`, { method: "POST", body: JSON.stringify({ content }) }),
 
   deleteComment: (id: number) => request<{ id: number }>(`/api/comments/${id}`, { method: "DELETE" }),
+
+  getUserProfile: (userId: string) =>
+    request<{
+      user: { id: number; user_id: string; username: string; created_at: string };
+      post_count: number;
+      follower_count: number;
+      following_count: number;
+      is_following: boolean;
+      is_self: boolean;
+    }>(`/api/users/${encodeURIComponent(userId)}`),
+
+  followUser: (userId: string) =>
+    request<{ following: boolean }>(`/api/users/${encodeURIComponent(userId)}/follow`, { method: "POST" }),
+
+  unfollowUser: (userId: string) =>
+    request<{ following: boolean }>(`/api/users/${encodeURIComponent(userId)}/follow`, { method: "DELETE" }),
+
+  listFollowers: (userId: string) =>
+    request<{ users: { user_id: string; username: string }[] }>(`/api/users/${encodeURIComponent(userId)}/followers`),
+
+  listFollowing: (userId: string) =>
+    request<{ users: { user_id: string; username: string }[] }>(`/api/users/${encodeURIComponent(userId)}/following`),
 };
