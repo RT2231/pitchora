@@ -2,6 +2,8 @@ import { api, getCurrentUser, ApiClientError } from "../api";
 import { escapeHtml, formatRelative, VISIBILITY_LABEL } from "../utils";
 import { navigate } from "../router";
 
+const MAX_DEPTH = 4; // SPEC 7章: 最大5階層（0始まりなので上限は4） worker側と合わせる
+
 export async function renderPostDetail(container: HTMLElement, id: number) {
   container.innerHTML = `<div class="loading">読み込み中…</div>`;
   const user = getCurrentUser();
@@ -106,6 +108,57 @@ export async function renderPostDetail(container: HTMLElement, id: number) {
   }
 }
 
+interface CommentNode {
+  id: number;
+  content: string;
+  is_edited: boolean;
+  is_deleted: boolean;
+  parent_comment_id: number | null;
+  depth: number;
+  created_at: string;
+  author_id: number;
+  author_user_id: string;
+  author_username: string;
+  children: CommentNode[];
+}
+
+function buildCommentTree(flat: any[]): CommentNode[] {
+  const byId = new Map<number, CommentNode>();
+  flat.forEach((c) => byId.set(c.id, { ...c, children: [] }));
+
+  const roots: CommentNode[] = [];
+  byId.forEach((node) => {
+    if (node.parent_comment_id && byId.has(node.parent_comment_id)) {
+      byId.get(node.parent_comment_id)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+  return roots;
+}
+
+function renderCommentNode(node: CommentNode, postId: number, user: { id: number } | null): string {
+  const canDelete = user && !node.is_deleted && user.id === node.author_id;
+  const canReply = user && !node.is_deleted && node.depth < MAX_DEPTH;
+
+  return `
+    <div class="comment" style="margin-left:${Math.min(node.depth, MAX_DEPTH) * 20}px">
+      <div class="comment-head">
+        <span class="comment-author">@<a href="#/users/${encodeURIComponent(node.author_user_id)}" style="color:inherit">${escapeHtml(node.author_user_id)}</a></span>
+        <span class="comment-time">${formatRelative(node.created_at)}</span>
+        ${node.is_edited && !node.is_deleted ? `<span class="comment-edited">編集済み</span>` : ""}
+      </div>
+      <div class="comment-body ${node.is_deleted ? "deleted" : ""}">${escapeHtml(node.content)}</div>
+      <div class="comment-actions">
+        ${canReply ? `<button class="btn btn-ghost" data-reply-to="${node.id}" data-reply-user="${escapeHtml(node.author_user_id)}" style="padding:2px 8px;font-size:12px">返信</button>` : ""}
+        ${canDelete ? `<button class="btn btn-ghost" data-delete-comment="${node.id}" style="padding:2px 8px;font-size:12px">削除</button>` : ""}
+      </div>
+      <div class="reply-form-slot" data-reply-slot="${node.id}"></div>
+      ${node.children.map((child) => renderCommentNode(child, postId, user)).join("")}
+    </div>
+  `;
+}
+
 async function loadComments(container: HTMLElement, postId: number, user: { id: number } | null) {
   const listEl = container.querySelector<HTMLDivElement>("#comment-list")!;
   try {
@@ -114,26 +167,9 @@ async function loadComments(container: HTMLElement, postId: number, user: { id: 
       listEl.innerHTML = `<p class="post-byline">まだコメントはありません。最初のコメントを残しましょう。</p>`;
       return;
     }
-    listEl.innerHTML = comments
-      .map((c: any) => {
-        const canDelete = user && !c.is_deleted && user.id === c.author_id;
-        return `
-          <div class="comment">
-            <div class="comment-head">
-              <span class="comment-author">@<a href="#/users/${encodeURIComponent(c.author_user_id)}" style="color:inherit">${escapeHtml(c.author_user_id)}</a></span>
-              <span class="comment-time">${formatRelative(c.created_at)}</span>
-              ${c.is_edited && !c.is_deleted ? `<span class="comment-edited">編集済み</span>` : ""}
-            </div>
-            <div class="comment-body ${c.is_deleted ? "deleted" : ""}">${escapeHtml(c.content)}</div>
-            ${
-              canDelete
-                ? `<div class="comment-actions"><button class="btn btn-ghost" data-delete-comment="${c.id}" style="padding:2px 8px;font-size:12px">削除</button></div>`
-                : ""
-            }
-          </div>
-        `;
-      })
-      .join("");
+
+    const tree = buildCommentTree(comments);
+    listEl.innerHTML = tree.map((node) => renderCommentNode(node, postId, user)).join("");
 
     listEl.querySelectorAll<HTMLButtonElement>("[data-delete-comment]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -145,6 +181,54 @@ async function loadComments(container: HTMLElement, postId: number, user: { id: 
         } catch {
           alert("削除に失敗しました。");
         }
+      });
+    });
+
+    listEl.querySelectorAll<HTMLButtonElement>("[data-reply-to]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const parentId = Number(btn.dataset.replyTo);
+        const replyUser = btn.dataset.replyUser || "";
+        const slot = listEl.querySelector<HTMLDivElement>(`[data-reply-slot="${parentId}"]`)!;
+
+        // 既に開いていたら閉じる（トグル）
+        if (slot.dataset.open === "true") {
+          slot.innerHTML = "";
+          slot.dataset.open = "false";
+          return;
+        }
+        // 他の返信フォームは閉じる
+        listEl.querySelectorAll<HTMLDivElement>(".reply-form-slot").forEach((s) => {
+          s.innerHTML = "";
+          s.dataset.open = "false";
+        });
+
+        slot.dataset.open = "true";
+        slot.innerHTML = `
+          <form class="comment-form reply-form">
+            <div class="field">
+              <textarea maxlength="5000" required>@${escapeHtml(replyUser)} </textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="padding:6px 14px;font-size:13px">返信する</button>
+            <div class="reply-error"></div>
+          </form>
+        `;
+        const form = slot.querySelector<HTMLFormElement>("form")!;
+        const textarea = slot.querySelector<HTMLTextAreaElement>("textarea")!;
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const errorSlot = slot.querySelector<HTMLDivElement>(".reply-error")!;
+          errorSlot.innerHTML = "";
+          try {
+            await api.createComment(postId, textarea.value, parentId);
+            await loadComments(container, postId, user);
+          } catch (err) {
+            const message = err instanceof ApiClientError ? err.message : "返信の投稿に失敗しました。";
+            errorSlot.innerHTML = `<div class="error-banner">${message}</div>`;
+          }
+        });
       });
     });
   } catch {

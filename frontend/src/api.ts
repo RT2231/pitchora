@@ -90,8 +90,11 @@ export const api = {
 
   listComments: (postId: number) => request<{ comments: any[] }>(`/api/posts/${postId}/comments`),
 
-  createComment: (postId: number, content: string) =>
-    request<{ id: number }>(`/api/posts/${postId}/comments`, { method: "POST", body: JSON.stringify({ content }) }),
+  createComment: (postId: number, content: string, parentCommentId?: number) =>
+    request<{ id: number }>(`/api/posts/${postId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ content, parent_comment_id: parentCommentId }),
+    }),
 
   deleteComment: (id: number) => request<{ id: number }>(`/api/comments/${id}`, { method: "DELETE" }),
 

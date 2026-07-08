@@ -350,7 +350,10 @@ button, input, textarea, select {
 .comment-edited { font-size: 11px; color: var(--text-muted); font-style: italic; }
 .comment-body { font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
 .comment-body.deleted { color: var(--text-muted); font-style: italic; }
-.comment-actions { margin-top: 6px; }
+.comment-actions { margin-top: 6px; display: flex; gap: 8px; }
+
+.reply-form { margin: 10px 0 4px; }
+.reply-form textarea { min-height: 70px; font-size: 13px; }
 
 .comment-form { margin-top: 20px; }
 

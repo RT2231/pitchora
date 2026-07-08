@@ -31,14 +31,16 @@ CREATE TABLE IF NOT EXISTS posts (
 );
 
 CREATE TABLE IF NOT EXISTS comments (
-  id         SERIAL PRIMARY KEY,
-  post_id    INTEGER NOT NULL REFERENCES posts(id),
-  user_id    INTEGER NOT NULL REFERENCES users(id),
-  content    TEXT NOT NULL,
-  is_edited  BOOLEAN NOT NULL DEFAULT false,
-  is_deleted BOOLEAN NOT NULL DEFAULT false,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  id                 SERIAL PRIMARY KEY,
+  post_id            INTEGER NOT NULL REFERENCES posts(id),
+  user_id            INTEGER NOT NULL REFERENCES users(id),
+  content            TEXT NOT NULL,
+  is_edited          BOOLEAN NOT NULL DEFAULT false,
+  is_deleted         BOOLEAN NOT NULL DEFAULT false,
+  parent_comment_id  INTEGER REFERENCES comments(id),
+  depth              INTEGER NOT NULL DEFAULT 0,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS follows (
@@ -63,6 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 CREATE INDEX IF NOT EXISTS idx_posts_visibility_created ON posts(visibility, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_genre_id ON posts(genre_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_comment_id);
 CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id);
 CREATE INDEX IF NOT EXISTS idx_follows_followee ON follows(followee_id);
 CREATE INDEX IF NOT EXISTS idx_reactions_post_id ON reactions(post_id);
