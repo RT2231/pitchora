@@ -7,6 +7,7 @@ import { renderRegister } from "./pages/register";
 import { renderPostDetail } from "./pages/postDetail";
 import { renderPostForm } from "./pages/newPost";
 import { renderProfile } from "./pages/profile";
+import { renderSearch } from "./pages/search";
 
 const app = document.getElementById("app")!;
 
@@ -14,7 +15,10 @@ app.innerHTML = `
   <header class="topbar">
     <div class="topbar-inner">
       <a href="#/" class="brand"><span class="dot"></span>Pitchora</a>
-      <div class="nav-actions" id="nav-actions"></div>
+      <div class="topbar-right">
+        <a href="#/search" class="btn btn-ghost" title="検索" aria-label="検索">🔍</a>
+        <div class="nav-actions" id="nav-actions"></div>
+      </div>
     </div>
   </header>
   <main class="shell" id="page"></main>
@@ -60,6 +64,7 @@ addRoute("/posts/:id/edit", (params) => {
 });
 addRoute("/posts/:id", (params) => renderPostDetail(page, Number(params.id)));
 addRoute("/users/:userId", (params) => renderProfile(page, params.userId));
+addRoute("/search", () => renderSearch(page));
 
 setNotFound(() => {
   page.innerHTML = `<div class="empty-state"><div class="headline">ページが見つかりません</div><a href="#/" class="btn" style="margin-top:12px">番組表に戻る</a></div>`;

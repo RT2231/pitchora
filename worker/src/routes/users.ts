@@ -8,6 +8,25 @@ async function findUserByPublicId(sql: ReturnType<typeof getDb>, userId: string)
   return rows[0] as { id: number; user_id: string; username: string } | undefined;
 }
 
+// GET /api/users?q=keyword
+export async function handleSearchUsers(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const q = url.searchParams.get("q")?.trim();
+  const limit = Math.min(Number(url.searchParams.get("limit") ?? 20) || 20, 50);
+
+  if (!q) return jsonOk({ users: [] });
+
+  const sql = getDb(env);
+  const users = await sql(
+    `SELECT user_id, username FROM users
+     WHERE user_id ILIKE $1 OR username ILIKE $1
+     ORDER BY username ASC
+     LIMIT $2`,
+    [`%${q}%`, limit]
+  );
+  return jsonOk({ users });
+}
+
 // GET /api/users/:userId
 export async function handleGetUserProfile(request: Request, env: Env, userId: string): Promise<Response> {
   const auth = await optionalAuth(request, env);

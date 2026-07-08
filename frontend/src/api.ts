@@ -70,13 +70,18 @@ export const api = {
 
   listGenres: () => request<{ genres: { id: number; name: string }[] }>("/api/genres"),
 
-  listPosts: (params: { genre_id?: number; offset?: number; author?: string } = {}) => {
+  listPosts: (params: { genre_id?: number; offset?: number; author?: string; q?: string; sort?: "newest" | "updated" | "popular" } = {}) => {
     const q = new URLSearchParams();
     if (params.genre_id) q.set("genre_id", String(params.genre_id));
     if (params.offset) q.set("offset", String(params.offset));
     if (params.author) q.set("author", params.author);
+    if (params.q) q.set("q", params.q);
+    if (params.sort) q.set("sort", params.sort);
     return request<{ posts: any[]; limit: number; offset: number }>(`/api/posts?${q.toString()}`);
   },
+
+  searchUsers: (q: string) =>
+    request<{ users: { user_id: string; username: string }[] }>(`/api/users?q=${encodeURIComponent(q)}`),
 
   getPost: (id: number) => request<{ post: any }>(`/api/posts/${id}`),
 

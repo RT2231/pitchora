@@ -43,13 +43,21 @@ function validatePostFields(body: CreatePostBody, partial: boolean) {
   }
 }
 
-// GET /api/posts?limit=20&offset=0&genre_id=1&author=user_id
+const SORTS: Record<string, string> = {
+  newest: "p.created_at DESC",
+  updated: "p.updated_at DESC",
+  popular: "like_count DESC, p.created_at DESC",
+};
+
+// GET /api/posts?limit=20&offset=0&genre_id=1&author=user_id&q=keyword&sort=newest|updated|popular
 export async function handleListPosts(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 20) || 20, 50);
   const offset = Math.max(Number(url.searchParams.get("offset") ?? 0) || 0, 0);
   const genreId = url.searchParams.get("genre_id");
   const author = url.searchParams.get("author");
+  const q = url.searchParams.get("q")?.trim();
+  const sort = SORTS[url.searchParams.get("sort") ?? "newest"] ?? SORTS.newest;
 
   const auth = await optionalAuth(request, env);
   const sql = getDb(env);
@@ -92,8 +100,13 @@ export async function handleListPosts(request: Request, env: Env): Promise<Respo
     query += ` AND u.user_id = $${binds.length}`;
   }
 
+  if (q) {
+    binds.push(`%${q}%`);
+    query += ` AND (p.title ILIKE $${binds.length} OR p.description ILIKE $${binds.length})`;
+  }
+
   binds.push(limit);
-  query += ` ORDER BY p.created_at DESC LIMIT $${binds.length}`;
+  query += ` ORDER BY ${sort} LIMIT $${binds.length}`;
   binds.push(offset);
   query += ` OFFSET $${binds.length}`;
 

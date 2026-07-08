@@ -16,6 +16,7 @@ import {
   handleUnfollowUser,
   handleListFollowers,
   handleListFollowing,
+  handleSearchUsers,
 } from "./routes/users";
 import { handleLikePost, handleUnlikePost } from "./routes/reactions";
 
@@ -65,6 +66,9 @@ async function route(request: Request, env: Env, path: string, method: string): 
 
   // /api/genres
   if (path === "/api/genres" && method === "GET") return handleListGenres(request, env);
+
+  // /api/users?q=keyword （検索。 /api/users/:userId より先に判定）
+  if (path === "/api/users" && method === "GET") return handleSearchUsers(request, env);
 
   // /api/posts
   if (path === "/api/posts" && method === "GET") return handleListPosts(request, env);

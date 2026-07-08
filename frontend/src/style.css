@@ -103,6 +103,7 @@ button, input, textarea, select {
 }
 
 .nav-actions { display: flex; align-items: center; gap: 10px; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
 
 .user-chip {
   font-family: var(--font-mono);
