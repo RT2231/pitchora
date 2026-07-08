@@ -47,6 +47,7 @@ export async function renderHome(container: HTMLElement) {
               <p class="slot-desc">${escapeHtml(p.description)}</p>
               <div class="slot-meta">
                 <a href="#/users/${encodeURIComponent(p.author_user_id)}" style="color:inherit" onclick="event.stopPropagation()">@${escapeHtml(p.author_user_id)}</a>
+                <span>❤️ ${p.like_count ?? 0}</span>
                 <span>💬 ${p.comment_count}</span>
                 ${visTag}
               </div>

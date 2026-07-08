@@ -50,12 +50,22 @@ CREATE TABLE IF NOT EXISTS follows (
   CHECK (follower_id <> followee_id)
 );
 
+CREATE TABLE IF NOT EXISTS reactions (
+  id            SERIAL PRIMARY KEY,
+  post_id       INTEGER NOT NULL REFERENCES posts(id),
+  user_id       INTEGER NOT NULL REFERENCES users(id),
+  reaction_type TEXT NOT NULL DEFAULT 'like',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (post_id, user_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 CREATE INDEX IF NOT EXISTS idx_posts_visibility_created ON posts(visibility, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_genre_id ON posts(genre_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id);
 CREATE INDEX IF NOT EXISTS idx_follows_followee ON follows(followee_id);
+CREATE INDEX IF NOT EXISTS idx_reactions_post_id ON reactions(post_id);
 
 INSERT INTO genres (name, sort_order) VALUES
   ('バラエティ', 1),

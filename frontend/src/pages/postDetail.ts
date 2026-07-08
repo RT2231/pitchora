@@ -23,14 +23,17 @@ export async function renderPostDetail(container: HTMLElement, id: number) {
       <div class="post-eyebrow">${escapeHtml(post.genre_name)}${post.visibility !== "public" ? ` ・ ${VISIBILITY_LABEL[post.visibility]}` : ""}</div>
       <h1 class="post-title">${escapeHtml(post.title)}</h1>
       <div class="post-byline">@<a href="#/users/${encodeURIComponent(post.author_user_id)}" style="color:inherit">${escapeHtml(post.author_user_id)}</a> ・ ${formatRelative(post.created_at)} OA</div>
-      ${
-        isOwner
-          ? `<div class="post-actions">
-               <a href="#/posts/${post.id}/edit" class="btn">編集する</a>
-               <button id="delete-post" class="btn btn-danger">削除する</button>
-             </div>`
-          : ""
-      }
+      <div class="post-actions">
+        <button id="like-toggle" class="btn like-btn ${post.liked_by_me ? "active" : ""}" ${user ? "" : "disabled title=\"ログインするといいねできます\""}>
+          <span id="like-icon">${post.liked_by_me ? "❤️" : "🤍"}</span> <span id="like-count">${post.like_count}</span>
+        </button>
+        ${
+          isOwner
+            ? `<a href="#/posts/${post.id}/edit" class="btn">編集する</a>
+               <button id="delete-post" class="btn btn-danger">削除する</button>`
+            : ""
+        }
+      </div>
     </div>
     <div class="post-body">${escapeHtml(post.description)}</div>
 
@@ -50,6 +53,25 @@ export async function renderPostDetail(container: HTMLElement, id: number) {
       }
     </div>
   `;
+
+  if (user) {
+    const likeBtn = container.querySelector<HTMLButtonElement>("#like-toggle")!;
+    let liked = Boolean(post.liked_by_me);
+    likeBtn.addEventListener("click", async () => {
+      likeBtn.disabled = true;
+      try {
+        const res = liked ? await api.unlikePost(post.id) : await api.likePost(post.id);
+        liked = res.liked;
+        container.querySelector("#like-icon")!.textContent = liked ? "❤️" : "🤍";
+        container.querySelector("#like-count")!.textContent = String(res.like_count);
+        likeBtn.classList.toggle("active", liked);
+      } catch {
+        alert("操作に失敗しました。");
+      } finally {
+        likeBtn.disabled = false;
+      }
+    });
+  }
 
   if (isOwner) {
     container.querySelector("#delete-post")!.addEventListener("click", async () => {

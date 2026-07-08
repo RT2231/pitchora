@@ -116,4 +116,8 @@ export const api = {
 
   listFollowing: (userId: string) =>
     request<{ users: { user_id: string; username: string }[] }>(`/api/users/${encodeURIComponent(userId)}/following`),
+
+  likePost: (postId: number) => request<{ liked: boolean; like_count: number }>(`/api/posts/${postId}/like`, { method: "POST" }),
+
+  unlikePost: (postId: number) => request<{ liked: boolean; like_count: number }>(`/api/posts/${postId}/like`, { method: "DELETE" }),
 };

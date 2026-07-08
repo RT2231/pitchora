@@ -56,21 +56,28 @@ export async function handleListPosts(request: Request, env: Env): Promise<Respo
 
   // 公開投稿 + (ログイン中なら自分の全投稿)
   const binds: (string | number)[] = [];
+  let authIdx = -1;
+  if (auth) {
+    binds.push(auth.userId);
+    authIdx = binds.length;
+  }
+
   let query = `
     SELECT p.id, p.title, p.description, p.genre_id, p.visibility, ${tsSelect("p", "created_at")},
            ${tsSelect("p", "updated_at")},
            u.id as author_id, u.user_id as author_user_id, u.username as author_username,
            g.name as genre_name,
-           (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.is_deleted = false) as comment_count
+           (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.is_deleted = false) as comment_count,
+           (SELECT COUNT(*)::int FROM reactions r WHERE r.post_id = p.id) as like_count,
+           ${authIdx > 0 ? `EXISTS (SELECT 1 FROM reactions r2 WHERE r2.post_id = p.id AND r2.user_id = $${authIdx}) as liked_by_me` : "false as liked_by_me"}
     FROM posts p
     JOIN users u ON u.id = p.user_id
     JOIN genres g ON g.id = p.genre_id
     WHERE p.is_deleted = false
   `;
 
-  if (auth) {
-    binds.push(auth.userId);
-    query += ` AND (p.visibility = 'public' OR p.user_id = $${binds.length})`;
+  if (authIdx > 0) {
+    query += ` AND (p.visibility = 'public' OR p.user_id = $${authIdx})`;
   } else {
     query += ` AND p.visibility = 'public'`;
   }
@@ -103,10 +110,12 @@ export async function handleGetPost(request: Request, env: Env, id: number): Pro
   const rows = await sql(
     `SELECT p.id, p.user_id, p.title, p.description, p.genre_id, p.visibility, p.is_deleted,
             ${tsSelect("p", "created_at")}, ${tsSelect("p", "updated_at")},
-            u.user_id as author_user_id, u.username as author_username, g.name as genre_name
+            u.user_id as author_user_id, u.username as author_username, g.name as genre_name,
+            (SELECT COUNT(*)::int FROM reactions r WHERE r.post_id = p.id) as like_count,
+            ${auth ? "EXISTS (SELECT 1 FROM reactions r2 WHERE r2.post_id = p.id AND r2.user_id = $2)" : "false"} as liked_by_me
      FROM posts p JOIN users u ON u.id = p.user_id JOIN genres g ON g.id = p.genre_id
      WHERE p.id = $1 AND p.is_deleted = false`,
-    [id]
+    auth ? [id, auth.userId] : [id]
   );
   const post = rows[0];
 

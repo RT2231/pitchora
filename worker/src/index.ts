@@ -17,6 +17,7 @@ import {
   handleListFollowers,
   handleListFollowing,
 } from "./routes/users";
+import { handleLikePost, handleUnlikePost } from "./routes/reactions";
 
 function corsHeaders(env: Env, request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
@@ -84,6 +85,14 @@ async function route(request: Request, env: Env, path: string, method: string): 
     const postId = Number(commentsMatch[1]);
     if (method === "GET") return handleListComments(request, env, postId);
     if (method === "POST") return handleCreateComment(request, env, postId);
+  }
+
+  // /api/posts/:id/like
+  const likeMatch = path.match(/^\/api\/posts\/(\d+)\/like$/);
+  if (likeMatch) {
+    const postId = Number(likeMatch[1]);
+    if (method === "POST") return handleLikePost(request, env, postId);
+    if (method === "DELETE") return handleUnlikePost(request, env, postId);
   }
 
   // /api/comments/:id

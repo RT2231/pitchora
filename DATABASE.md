@@ -5,8 +5,8 @@ Version: 0.2.0（MVP: 認証〜投稿〜コメントの範囲のみ）
 このドキュメントは Neon（Postgres）上のテーブル設計を定義する。
 SPEC.md を唯一の仕様とし、本ドキュメントはその実装としての DB 設計を担う。
 
-対象範囲（実装済み）: 3章(アカウント), 5章(投稿), 6章(コメント), 10章(フォロー), 15章(ジャンル), 18章(フォロー一覧・簡易版)
-将来拡張（未実装）: 返信の多階層化, リアクション種別追加, ブックマーク, 通知, 検索インデックス, タグ, NGワード, 通報/管理者機能, 放送局
+対象範囲（実装済み）: 3章(アカウント), 5章(投稿), 6章(コメント), 8章(リアクション/いいね), 10章(フォロー), 15章(ジャンル), 18章(フォロー一覧・簡易版)
+将来拡張（未実装）: 返信の多階層化, リアクション種別追加（❤️以外）, ブックマーク, 通知, 検索インデックス, タグ, NGワード, 通報/管理者機能, 放送局
 
 **データベース: Neon（Postgres） ※D1は使用しない**
 Cloudflare Workers からは `@neondatabase/serverless`（HTTPベースのドライバ）で接続する。
@@ -129,11 +129,30 @@ CREATE INDEX idx_follows_followee ON follows(followee_id);
 
 ---
 
+### reactions
+
+| カラム | 型 | 制約 | 説明 |
+|---|---|---|---|
+| id | SERIAL | PRIMARY KEY | ID |
+| post_id | INTEGER | NOT NULL REFERENCES posts(id) | 対象投稿 |
+| user_id | INTEGER | NOT NULL REFERENCES users(id) | リアクションしたユーザー |
+| reaction_type | TEXT | NOT NULL DEFAULT 'like' | リアクション種類（現状は'like'固定。将来拡張用に列を用意） |
+| created_at | TIMESTAMPTZ | NOT NULL DEFAULT now() | 日時 |
+
+制約: `UNIQUE (post_id, user_id)`（SPEC 8章: 同一ユーザーは1投稿につき1回、種類問わず1つだけ）
+
+インデックス:
+```sql
+CREATE INDEX idx_reactions_post_id ON reactions(post_id);
+```
+
+---
+
 ## 将来マイグレーション予定（未実装・参考）
 
 - posts: tags(JSONB or 別テーブル), broadcast_day, broadcast_time, cast, thumbnail_url
 - comments: parent_comment_id（返信）
-- reactions テーブル（いいね・将来の複数リアクション）
+- reactions: 複数リアクション種別対応（👍👏😂😭😮）は reaction_type 列で対応可能。UNIQUE制約の見直しが必要
 - bookmarks テーブル
 - notifications テーブル
 - reports テーブル

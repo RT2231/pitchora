@@ -311,6 +311,19 @@ button, input, textarea, select {
 }
 .post-actions { display: flex; gap: 8px; margin: 20px 0 8px; }
 
+.like-btn {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.like-btn.active {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+.like-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ---------- Comments ---------- */
 
 .comments-section { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 24px; }
